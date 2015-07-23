@@ -1,6 +1,6 @@
 {
   "name": "alternative-view",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Declarative logic-driven template selection for Mozu storefronts",
   "devDependencies": {
     "grunt": "^0.4.5",
