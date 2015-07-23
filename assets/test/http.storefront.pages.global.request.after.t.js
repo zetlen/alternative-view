@@ -13,7 +13,9 @@
 var Simulator = require('mozu-action-simulator');
 var assert = Simulator.assert;
 
-describe('http.storefront.pages.global.request.after', function () {
+var actionName = 'http.storefront.pages.global.request.after'; 
+
+describe(actionName, function () {
 
   var action;
 
@@ -32,19 +34,142 @@ describe('http.storefront.pages.global.request.after', function () {
         done();
       };
 
-      context = Simulator.context('http.storefront.pages.global.request.after', callback);
+      context = Simulator.context(actionName, callback);
 
-      context.response = {
-        viewName: "original",
+      context.request = {
         url: url
       };
 
+      context.response = {
+        viewName: "original"
+      };
 
-      Simulator.simulate('http.storefront.pages.global.request.after', action, context, callback);
+      context.configuration = {
+        rules: [
+          {
+            type: 'queryparams',
+            params: {
+              partial: 'true'
+            },
+            viewName: 'faceting-partial'
+          }
+        ]
+      };
+
+
+      Simulator.simulate(actionName, action, context, callback);
     }
   }
 
+  it("passes right through if the context doesn't have a response.viewName", function(done) {
+    var callback = function(err) {
+      assert.ok(!err, "Callback was called with an error: " + err);
+      done();
+    }
+    var context = Simulator.context(actionName, callback);
 
-  it('sets the viewName to "faceting-partial" if the url parameter "partial=true" exists', tryUrl('/c/167?other=parameters&partial=true', true));
-  it('leaves the viewName alone if the url parameter "partial=true" does not exist', tryUrl('/c/167?other=parameters', false));
+    context.response.viewName = '';
+
+    Simulator.simulate(actionName, action, context, callback);
+  });
+
+  describe("throws an informative error if", function() {
+
+    it("you didn't make rules", function(done) {
+      var callback = function(err) {
+        throw new Error("Arrived at callback and shouldn't have.");
+        done();
+      };
+
+      var context = Simulator.context(actionName, callback);
+
+      context.response.viewName = 'original';
+
+      assert.throws(function() {
+        Simulator.simulate(actionName, action, context, callback);
+      }, "No rules found");
+      done();
+    });
+
+    it("you specify an unknown ruletype", function(done) {
+      var callback = function(err) {
+        throw new Error("Arrived at callback and shouldn't have.");
+        done();
+      };
+
+      var context = Simulator.context(actionName, callback);
+
+      context.configuration = {
+        rules: [
+          {
+            type: 'bad'
+          }
+        ]
+      };
+
+      context.response.viewName = 'original';
+
+      assert.throws(function() {
+        Simulator.simulate(actionName, action, context, callback);
+      }, "Unknown AlternativeView rule type");
+      done();
+    });
+
+    it("you specified a queryparams rule and did not supply params", function(done) {
+      var callback = function(err) {
+        throw new Error("Arrived at callback and shouldn't have.");
+        done();
+      };
+
+      var context = Simulator.context(actionName, callback);
+
+      context.configuration = {
+        rules: [
+          {
+            type: 'queryparams'
+          }
+        ]
+      };
+
+      context.response.viewName = 'original';
+
+      assert.throws(function() {
+        Simulator.simulate(actionName, action, context, callback);
+      }, "specified without 'params'");
+      done();
+    });
+  
+    it("you didn't supply a viewName in your rule", function(done) {
+      var callback = function(err) {
+        throw new Error("Arrived at callback and shouldn't have.");
+        done();
+      };
+
+      var context = Simulator.context(actionName, callback);
+
+      context.configuration = {
+        rules: [
+          {
+            type: 'queryparams',
+            params: {
+              some: 'thing'
+            }
+          }
+        ]
+      };
+
+      context.request.url = "/?some=thing";
+
+      context.response.viewName = 'original';
+
+      assert.throws(function() {
+        Simulator.simulate(actionName, action, context, callback);
+      }, "specified with no viewName");
+      done();
+    });
+  });
+
+  it('sets the viewName to the queryparam rule viewName if the url parameter matches', tryUrl('/c/167?other=parameters&partial=true', true));
+  it('does not apply a queryparam rule if the url parameters do not exist', tryUrl('/c/167?other=parameters', false));
+  it('does not apply a queryparam rule if the url parameters are wrong', tryUrl('/c/167?other=parameters&partial=FLOO', false));
 });
