@@ -2,6 +2,21 @@
 /**
  * Implementation for http.storefront.pages.global.request.after
  * This function will receive the following context object:
+ */
+
+var setAlternative = require('../../set-alternative');
+
+module.exports = function(context, callback) {
+
+  if (context.response.viewName) {
+    setAlternative(context);
+  }
+
+  callback();
+  
+};
+},{"../../set-alternative":2}],2:[function(require,module,exports){
+/**
  *
  * http://www.infinitelooper.com/?v=6_9blTxwFeA&p=n#/110;123
  *
@@ -34,36 +49,46 @@ var RuleStrategies = {
     })) {
       return createAlternativeViewName(rule, context);
     }
+  },
+  headers: function(rule, context) {
+    if (!rule.headers) {
+      throw new Error("Rule of type 'headers' specified without 'headers' collection.");
+    }
+    if (Object.keys(rule.headers).every(function(key) {
+      return context.request.headers[key] === rule.headers[key];
+    })) {
+      return createAlternativeViewName(rule, context);
+    }
   }
 };
 
 
-function getAlternative(context) {
+module.exports = function setAlternative(context, rules) {
 
-  if (!context.configuration || !context.configuration.rules) {
+  if ((!rules || rules.length === 0) && (!context.configuration || !context.configuration.rules)) {
     throw new Error("No rules found! Please create rules in your action configuration.");
   }
 
-  return [].reduce.call(context.configuration.rules, function(qual, rule) {
+  rules = rules || context.configuration.rules;
+
+  var alternative = [].reduce.call(rules, function(qual, rule) {
 
     if (!RuleStrategies[rule.type]) {
       throw new Error("Unknown AlternativeView rule type: " + rule.type);
     }
-
+    console.log('alternative-view: the context matched a ' + rule.type + ' rule');
     return qual || RuleStrategies[rule.type](rule, context);
 
   }, false);
 
-}
+  if (alternative) {
+    console.log('alternative-view: updating context.response.viewName to ' + alternative);
+    context.response.set('X-Canonical-Url', context.request.url);
+    context.response.viewName = alternative;
+  }
 
-module.exports = function(context, callback) {
-
-  if (context.response.viewName)
-    context.response.viewName = getAlternative(context) || context.response.viewName;
-
-  callback();
 };
-},{"querystring":6,"url":7}],2:[function(require,module,exports){
+},{"querystring":7,"url":8}],3:[function(require,module,exports){
 module.exports = {
   
   'http.storefront.pages.global.request.after': {
@@ -72,7 +97,7 @@ module.exports = {
    }
   
 };
-},{"./domains/storefront/http.storefront.pages.global.request.after":1}],3:[function(require,module,exports){
+},{"./domains/storefront/http.storefront.pages.global.request.after":1}],4:[function(require,module,exports){
 /*! https://mths.be/punycode v1.3.2 by @mathias */
 ;(function(root) {
 
@@ -604,7 +629,7 @@ module.exports = {
 
 }(this));
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -690,7 +715,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -777,13 +802,13 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":4,"./encode":5}],7:[function(require,module,exports){
+},{"./decode":5,"./encode":6}],8:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1492,5 +1517,5 @@ function isNullOrUndefined(arg) {
   return  arg == null;
 }
 
-},{"punycode":3,"querystring":6}]},{},[2])(2)
+},{"punycode":4,"querystring":7}]},{},[3])(3)
 });
